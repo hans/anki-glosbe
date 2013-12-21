@@ -2,6 +2,10 @@ import itertools
 import json
 import urllib
 
+####################
+##      CORE      ##
+####################
+
 GLOSBE_TRANSLATE_URL = ("http://glosbe.com/gapi_v0_1/translate?format=json&"
                         "from={from_lang}&dest={dest_lang}&phrase={phrase}")
 
@@ -39,3 +43,36 @@ def get_translations(phrase, from_lang, dest_lang):
     meanings = list(itertools.chain.from_iterable(meanings_nested))
 
     return phrases, meanings
+
+####################
+##      ANKI      ##
+####################
+
+from anki.hooks import addHook
+from aqt import mw
+from aqt.qt import QInputDialog
+
+def editor_glosbe_translate(self):
+    self.saveNow()
+
+    # Phrase is expected to be in first field
+    phrase = self.note.fields[0]
+
+    # TODO: Don't fix languages
+    translations = get_translations(phrase, 'deu', 'eng')
+
+    item, accepted = QInputDialog.getItem(mw, "Glosbe translation",
+                                          "Choose a translation from the list below.",
+                                          translations[0] + translations[1])
+
+    if accepted:
+        self.note.fields[self.currentField] += item
+
+    self.loadNote()
+
+def editor_add_glosbe_translate_icon(self):
+    self._addButton("glosbe_translate", lambda: editor_glosbe_translate(self),
+                    tip=u"Retrieve translations and definitions from Glosbe",
+                    text=u"GS")
+
+addHook("setupEditorButtons", editor_add_glosbe_translate_icon)
